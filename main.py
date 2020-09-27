@@ -1,31 +1,37 @@
+#!/usr/bin/env python
+
 """
-Author: William Rivera
-Project: Prion Maintenance Collaborative Project
+Analyze amino acid sequences for prion activity using three different, sliding window-based algorithms.
 
-This is a webapp that analyzes amino acid sequences using three different algorithms.
-Prion Aggregation Propensity Algorithm (PAPA) - measures the propensity of an amino acid sequence to assume a prion-like configuration
-FoldIndex - measures the intrinsic foldedness of an amino acid sequence
-Prion Maintenance Algorithm (PRIMA) - measures likelihood that a prion will 'maintain' or transfect another prion.
-
-dashappserver.py - This file is responsible for launching and rendering our webapp.
+This webapp is an outgrowth of the Prion Maintenance Collaborative Project (PRIMCOP) which aims to further our understanding of prion proteins, using wet lab and computational approaches. The algorithms implemented are: 
+    Prion Aggregation Propensity Algorithm (PAPA) - measures the propensity of an amino acid sequence to assume a prion-like configuration
+    FoldIndex - measures the intrinsic foldedness of an amino acid sequence
+    Prion Maintenance Algorithm (PRIMA) - measures likelihood that a prion will 'maintain' or transfect another prion.
 """
 
-import dash  # import dash web app platform, allows for Dash app creation
-import dash_core_components as dcc  # extends Dash capability for data visualizatino
-import dash_html_components as html  # allows for rendering of HTML using Python code
-import plotly.graph_objs as go  # allows for use of Plotly library plotting functionality
-import pandas as pd  # used for data access and manipulation
-import numpy as np  # ditto
+__author__ = "William Rivera"
+__credits__ = ["William Rivera", "Kyle Maclea",
+               "Raghava Adusimilli", "Stephen Dunn"]
+__license__ = "MIT"
+__version__ = "0.0.1"
+__maintainer__ = "William Rivera"
+__email__ = "wto3@wildcats.unh.edu"
+__status__ = "Development"
 
 
-# Amino Acid Attributes
-# **********************************************************************************************************************
-# **********************************************************************************************************************
+import dash
+import dash_core_components as dcc
+import dash_html_components as html
+import plotly.graph_objs as go
 
+import numpy as np
+import pandas as pd
+
+# TODO Migrate global prion attributes to another script to minimize clutter
 # All possible amino acid residues
 amino_acids = 'ACDEFGHIKLMNPQRSTVWY'
 
-# PAPA scores for all individual amino acids
+# Propensity scores for all individual amino acids
 propensities = {'A': -0.396490246, 'C': 0.415164505, 'D': -1.276997939, 'E': -0.605023827, 'F': 0.838732498,
                 'G': -0.039220713, 'H': -0.278573356, 'I': 0.813697862, 'K': -1.576748587, 'L': -0.040005335,
                 'M': 0.673729095, 'N': 0.080295334, 'P': -1.197447496, 'Q': 0.069168387, 'R': -0.405858577,
@@ -49,7 +55,7 @@ maintenance = {'A': 0.28, 'C': 0.45, 'D': -0.19, 'E': 0.99, 'F': 0.33,
                'M': -1.80, 'N': 0.18, 'P': 0.065, 'Q': 0.11, 'R': -0.88,
                'S': 0.18, 'T': -0.059, 'V': -0.35, 'W': 1.40, 'Y': 1.03}
 
-# default window size
+# Default window size
 window_size = 41
 half_window_size = int(window_size / 2)
 
@@ -78,15 +84,12 @@ sample_sequences = ['MMNNNGNQVSNLSNALRQVNIGNRNSNTTTDQSNINFEFSTGVNNNNNNNSSSNNNNVQ
 
 aminoacidDict = dict(zip(sequence_labels, sample_sequences))
 
-# sequence_id = ['']
-# sequence = 'MSDSNQGNNQQNYQQYSQNGNQQQGNNRYQGYQAYNAQAQPAGGYYQNYQGYSGYQQGGYQQYNPDAGYQQQYNPQGGYQQYNPQGGYQQQFNPQGGRGNYKNFNYNNNLQGYQAGFQPQSQGMSLNDFQKQQKQ'
 default_seq = sample_sequences[-3]
 default_seq_id = sequence_labels[-3]
-# **********************************************************************************************************************
-# **********************************************************************************************************************
-
 
 # Function Declarations
+
+
 def get_window(sequence, position):
     """
     Determines sliding window position and contents.
@@ -172,13 +175,6 @@ def super_window_scores(sequence, window_scores, fold_index_scores=None):
     return scores
 
 
-"""
-FoldIndex formula:
-2.785(H) - |R| - 1.151
-H = sum of the hydrophobicities across the window
-R = net charge (where D/E=-1; K/R=+1; all others = neutral (including H))
-"""
-
 def fold_index(sequence):
     """
     Calculates FoldIndex scores for all windows in a given sequence.
@@ -192,7 +188,8 @@ def fold_index(sequence):
     """
     charges = window_scores(sequence, charge)
     hydrophobicities = window_scores(sequence, hydrophobicity)
-    fold_index_list = [2.785 * hydrophobicities[i] - abs(charges[i]) - 1.151 for i in range(len(sequence))]
+    fold_index_list = [2.785 * hydrophobicities[i] -
+                       abs(charges[i]) - 1.151 for i in range(len(sequence))]
     return super_window_scores(sequence, fold_index_list)
 
 
@@ -213,6 +210,10 @@ def prima_score(sequence):
 
 
 def classify(sequence, ignore_fold_index=True):
+    """
+    Doc String Placeholder
+    """
+
     fold_index_list = fold_index(sequence)
     # print 'number of positions with negative fold index', sum([1 for f in fold_index_list if f < 0]), 'out of', len(sequence)
 
@@ -222,7 +223,8 @@ def classify(sequence, ignore_fold_index=True):
     if ignore_fold_index:
         scores = super_window_scores(sequence, window_propensities)
     else:
-        scores = super_window_scores(sequence, window_propensities, fold_index_list)
+        scores = super_window_scores(
+            sequence, window_propensities, fold_index_list)
     max_score = max(scores)
     max_position = scores.index(max_score)
     # the case when no window had a negative foldIndex
@@ -240,15 +242,24 @@ def classify(sequence, ignore_fold_index=True):
     return max_score, max_position, scores, fold_index_list, prima_score_list, max_prima_score, max_prima_position
 
 
+# TODO Clean up documentation and rename this function
+
+
 def analyze(sequence, sequence_id):
+    """
+    Doc String Placeholder
+    """
     sequence_id = [sequence_id]
-    score, pos, scores, fold_indexes, prima_scores, prima_score, prima_position = classify(sequence)
+    # ? Why are score, pos, prima_score and prima_position unused?
+    score, pos, scores, fold_indexes, prima_scores, prima_score, prima_position = classify(
+        sequence)
     n_columns = 4
     arr = np.empty(((len(sequence) - window_size), n_columns))
     for i, s in enumerate(scores):
         arr[i, :] = [i + 1, s, prima_scores[i], fold_indexes[i]]
     df = pd.DataFrame(data=arr,
-                      columns=['Sequence Position', 'PAPA score', 'PRIMA score', 'FoldIndex score']
+                      columns=['Sequence Position', 'PAPA score',
+                               'PRIMA score', 'FoldIndex score']
                       )
 
     temp_list = list(sequence)
@@ -262,7 +273,13 @@ def analyze(sequence, sequence_id):
 
     return (df3)
 
+
+# TODO Attempt to refactor into lambda function
+
 def setrange(lows, highs):
+    """
+    Establishes range of value scale from -|max dev| to + |max dev|. Scales graphs correctly.
+    """
     ranges = []
     for a, b in zip(lows, highs):
         if abs(a) > abs(b):
@@ -273,29 +290,28 @@ def setrange(lows, highs):
             ranges.append(temp)
     return ranges
 
+
 app = dash.Dash()  # creates Dash app
 
 df = analyze(default_seq, default_seq_id)
 
-min_scores = df[['PAPA score', 'PRIMA score', 'FoldIndex score']].min().tolist()
-max_scores = df[['PAPA score', 'PRIMA score', 'FoldIndex score']].max().tolist()
-
-
-
+min_scores = df[['PAPA score', 'PRIMA score',
+                 'FoldIndex score']].min().tolist()
+max_scores = df[['PAPA score', 'PRIMA score',
+                 'FoldIndex score']].max().tolist()
 
 
 score_ranges = setrange(min_scores, max_scores)
 papa_y_range = score_ranges[0]
 prima_y_range = score_ranges[1]
 fold_index_y_range = score_ranges[2]
-print(score_ranges)
 
 sc1 = [go.Scatter(
     x=df[df['Sequence_ID'] == i]['Sequence Position'],
     y=df[df['Sequence_ID'] == i]['PAPA score'],
     text=df[df['Sequence_ID'] == i]['Amino Acid'],
     mode='lines+markers',
-    fill='tozeroy',
+    fill='none',
     opacity=0.7,
     marker={
         'size': 10,
@@ -318,17 +334,17 @@ sc2 = [go.Scatter(
     name='PRIMA',
     yaxis='y2'
 ) for i in df.Sequence_ID.unique()]
-sc3 = [go.Scatter(
+sc3 = [go.Bar(
     x=df[df['Sequence_ID'] == i]['Sequence Position'],
     y=df[df['Sequence_ID'] == i]['FoldIndex score'],
     text=df[df['Sequence_ID'] == i]['Amino Acid'],
-    mode='lines+markers',
-    fill='tozeroy',
+    # mode='lines+markers',
+    # fill='none',
     opacity=0.7,
-    marker={
-        'size': 10,
-        'line': {'width': 0.5, 'color': 'white'}
-    },
+    # marker={
+    #    'size': 10,
+    #    'line': {'width': 0.5, 'color': 'white'}
+    # },
     name='FoldIndex',
     yaxis='y3'
 ) for i in df.Sequence_ID.unique()]
@@ -403,31 +419,32 @@ app.layout = html.Div(children=[
 ])
 
 
+# TODO Find way to eliminate redundancy in trace scatter plot generation
 @app.callback(
     dash.dependencies.Output('prion-analysis', 'figure'),
     [dash.dependencies.Input('my-dropdown', 'value')])
 def update_figure(value):
-    seq_id = [seq_id for seq_id, seq_val in aminoacidDict.items() if seq_val == value]
+    seq_id = [seq_id for seq_id, seq_val in aminoacidDict.items()
+              if seq_val == value]
     upd_sequence_id = seq_id
     upd_sequence = value
     df = analyze(upd_sequence, upd_sequence_id)
 
-    min_scores = df[['PAPA score', 'PRIMA score', 'FoldIndex score']].min().tolist()
-    max_scores = df[['PAPA score', 'PRIMA score', 'FoldIndex score']].max().tolist()
+    min_scores = df[['PAPA score', 'PRIMA score',
+                     'FoldIndex score']].min().tolist()
+    max_scores = df[['PAPA score', 'PRIMA score',
+                     'FoldIndex score']].max().tolist()
     score_ranges = setrange(min_scores, max_scores)
     papa_y_range = score_ranges[0]
     prima_y_range = score_ranges[1]
     fold_index_y_range = score_ranges[2]
-    print(score_ranges)
-
-    #    print(dff)
 
     traces = [go.Scatter(
         x=df[df['Sequence_ID'] == i]['Sequence Position'],
         y=df[df['Sequence_ID'] == i]['PAPA score'],
         text=df[df['Sequence_ID'] == i]['Amino Acid'],
         mode='lines+markers',
-        fill='tozeroy',
+        fill='none',
         opacity=0.7,
         marker={
             'size': 10,
@@ -450,17 +467,18 @@ def update_figure(value):
         name='PRIMA',
         yaxis='y2'
     ) for i in df.Sequence_ID.unique()]
-    traces3 = [go.Scatter(
+    traces3 = [go.Bar(
+        # TODO change bar color to red
         x=df[df['Sequence_ID'] == i]['Sequence Position'],
         y=df[df['Sequence_ID'] == i]['FoldIndex score'],
         text=df[df['Sequence_ID'] == i]['Amino Acid'],
-        mode='lines+markers',
-        fill='tozeroy',
+        # mode='lines+markers',
+        # fill='none',
         opacity=0.7,
-        marker={
-            'size': 10,
-            'line': {'width': 0.5, 'color': 'white'}
-        },
+        # marker={
+        #    'size': 10,
+        #    'line': {'width': 0.5, 'color': 'white'}
+        # },
         name='FoldIndex',
         yaxis='y3'
     ) for i in df.Sequence_ID.unique()]
