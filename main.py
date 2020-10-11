@@ -3,7 +3,8 @@
 """
 Analyze amino acid sequences for prion activity using three different, sliding window-based algorithms.
 
-This webapp is an outgrowth of the Prion Maintenance Collaborative Project (PRIMCOP) which aims to further our understanding of prion proteins, using wet lab and computational approaches. The algorithms implemented are: 
+This webapp is an outgrowth of the Prion Maintenance Collaborative Project (PRIMCOP) which aims to further our
+understanding of prion proteins, using wet lab and computational approaches. The algorithms implemented are:
     Prion Aggregation Propensity Algorithm (PAPA) - measures the propensity of an amino acid sequence to assume a prion-like configuration
     FoldIndex - measures the intrinsic foldedness of an amino acid sequence
     Prion Maintenance Algorithm (PRIMA) - measures likelihood that a prion will 'maintain' or transfect another prion.
@@ -18,74 +19,22 @@ __maintainer__ = "William Rivera"
 __email__ = "wto3@wildcats.unh.edu"
 __status__ = "Development"
 
-
+from prions import *  # import dictionaries with prion characteristic data for individual amino acids
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
-import plotly.graph_objs as go
-
 import numpy as np
 import pandas as pd
-
-# TODO Migrate global prion attributes to another script to minimize clutter
-# All possible amino acid residues
-amino_acids = 'ACDEFGHIKLMNPQRSTVWY'
-
-# Propensity scores for all individual amino acids
-propensities = {'A': -0.396490246, 'C': 0.415164505, 'D': -1.276997939, 'E': -0.605023827, 'F': 0.838732498,
-                'G': -0.039220713, 'H': -0.278573356, 'I': 0.813697862, 'K': -1.576748587, 'L': -0.040005335,
-                'M': 0.673729095, 'N': 0.080295334, 'P': -1.197447496, 'Q': 0.069168387, 'R': -0.405858577,
-                'S': 0.133912418, 'T': -0.11457038, 'V': 0.813697862, 'W': 0.666735081, 'Y': 0.77865336}
-
-# Hydrophobicity scores for all individual amino acids
-hydrophobicity = {'A': 0.7, 'C': 0.777777778, 'D': 0.111111111, 'E': 0.111111111, 'F': 0.811111111,
-                  'G': 0.455555556, 'H': 0.144444444, 'I': 1, 'K': 0.066666667, 'L': 0.922222222,
-                  'M': 0.711111111, 'N': 0.111111111, 'P': 0.322222222, 'Q': 0.111111111, 'R': 0,
-                  'S': 0.411111111, 'T': 0.422222222, 'V': 0.966666667, 'W': 0.4, 'Y': 0.355555556}
-
-# Amino acid charge states
-charge = {'A': 0, 'C': 0, 'D': -1, 'E': -1, 'F': 0,
-          'G': 0, 'H': 0, 'I': 0, 'K': 1, 'L': 0,
-          'M': 0, 'N': 0, 'P': 0, 'Q': 0, 'R': 1,
-          'S': 0, 'T': 0, 'V': 0, 'W': 0, 'Y': 0}
-
-# Maintenance scores for all individual amino acids
-maintenance = {'A': 0.28, 'C': 0.45, 'D': -0.19, 'E': 0.99, 'F': 0.33,
-               'G': 0.047, 'H': -0.064, 'I': -0.57, 'K': 0, 'L': -0.48,
-               'M': -1.80, 'N': 0.18, 'P': 0.065, 'Q': 0.11, 'R': -0.88,
-               'S': 0.18, 'T': -0.059, 'V': -0.35, 'W': 1.40, 'Y': 1.03}
+import plotly.graph_objs as go
 
 # Default window size
 window_size = 41
 half_window_size = int(window_size / 2)
 
-sequence_labels = ['Ure2', 'Sup35', 'Rnq1', 'New1', 'Nsp1', 'Puf2', 'Pub1', 'Swi1', 'Ybr016w', 'Cbk1', 'Lsm4',
-                   'Ybl081w', 'Ksp1', 'Asm4', 'Gln3', 'Ypr022c', 'Rlm1', 'Nrp1']
-
-sample_sequences = ['MMNNNGNQVSNLSNALRQVNIGNRNSNTTTDQSNINFEFSTGVNNNNNNNSSSNNNNVQNNNSGRNGSQNNDNENNIKNTLEQHRQQQQ',
-                    'MSDSNQGNNQQNYQQYSQNGNQQQGNNRYQGYQAYNAQAQPAGGYYQNYQGYSGYQQGGYQQYNPDAGYQQQYNPQGGYQQYNPQGGYQQQFNPQGGRGNYKNFNYNNNLQGYQAGFQPQSQGMSLNDFQKQQKQ',
-                    'SGSGGGSQSMGASGLAALASQFFKSGNNSQGQGQGQGQGQGQGQGQGQGSFTALASLASSFMNSNNNNQQGQNQSSGGSSFGALASMASSFMHSNNNQNSNNSQQGYNQSYQNGNQNSQGYNNQQYQGGNGGYQQQQGQSGGAFSSLASMAQSYLGGGQTQSNQQQYNQQGQNNQQQYQQQGQNYQHQQQGQQQQQGHSSSFSALASMASSYLGNNSNSNSSYGGQQQANEYGRPQQNGQQQSNEYGRPQYGGNQNSNGQHESFNFSGNFSQQNNNGNQNRY',
-                    'GSNNASKKSSYQQQRNWKQGGNYQQGGYQSYNSNYNNYNNYNNYNNYNNYNNYNKYNGQGYQKSTYKQSAVTPNQSG',
-                    'MNFNTPQQNKTPFSFGTANNNSNTTNQNSSTGAGAFGTGQSTFGFNNSAPNNTNNANSSITPAFGSNNTGNTAFGNSNPTSNVFGSNNSTTNTFGSNSAGTSLFGSSSAQQTKSNGTAGGNTFGSSSLFNNSTNSNTTKPAFGGLNFGGGNNTTPSSTGNANTSNNLFGATANAN',
-                    'NSYFNNQQVVYSGNQNQNQNGNSNGLDELNSQFDSFRIANGTNLSLPIVNLPNVSNNNNNYNNSGYSSQMNPLSRSVSHNNNNNTNNYNNNDNDNNNNNNNNNNNNNNNNNNNNNSNNSNNNNNNDTSLYRYRSYGY',
-                    'NNNNNNYQQRRNYGNNNRGGFRQYNSNNNNNMNMGMNMNMNMNMNNSRGMPPSSMGMPIGAMPLPSQGQPQQSQTIGLPPQVNPQ',
-                    'MDFFNLNNNNNNNNTTTTTTTTNNNNTNNNNTNNNNNPANNTNNNNSTGHSSNTNNNTNNNNTNTGASGVDDFQNFFDPKPFDQNLDSNNNNSNSNNNDNNNSNTVASSTNFTSPTAVVNNAAPANVTGGKAANFIQNQSPQFNSPYDSNNSNTNLNSLSPQAILAKNSIIDSSNLPLQAQQQLYGGNNNNNSTGIANDNVITPHFITNVQSISQNSSSSTPNTNSNSTPNANQQFLPFNNSASNNGNLTSNQLISNYAASNSMDRSSSASNEFVPNTSDNNNNSNNHNMRNNSNNKTSNNNNVTAVPAATPANTNNSTSNANTVFSERAAMFAALQQKQQQRFQALQQQQQQQQNQQQQNQQPQQQQQQQQNPKFLQSQRQQQQRSILQSLNPA',
-                    'MSANDYYGGTAGEKSQYSRPSNPPPSSAHQNKTQERGYPPQQQQQYYQQQQQHPGYYNQQGYNQQGYNQQGYNQQGYNQQGYNQQGYNQQGHQQPVYVQQQPPQR',
-                    'MYNSSTNHHEGAPTSGHGYYMSQQQDQQHQQQQQYANEMNPYQQIPRPPAAGFSSNYMKEQGSHQSLQEHLQRETGNLGSGFTDVPALNYPATPPPHNNYAASNQMINTPPPSMGGLYRHNNNSQSMVQNGNGSGNAQLPQLSPGQYSIESEYNQNLNGSSSSSPFHQPQTLRSNGSYSSGLRSVKSFQRLQQEQENVQVQQQLSQAQQQNSRQQQQQLQYQQQQQQQQQQQHMQIQQQQQQQQQQQQSQSPVQSGFNNGTISNYMYFER',
-                    'SNNNSNSNGPGHKRYYNNRDSNNNRGNYNRRNNNNGNSNRRPYSQNRQYNNSNSSNINNSINSINSNNQNMNNGLGGSVQHHFNSSSPQKVEF',
-                    'NAPSHQSNYHPHYNHMKYNNTGSYYYYNNNNNSSVNPHNQAGLQSINRSIPSAPYGAYNQNRANDVPYMNTQKKHHRFSANNNLNQQKYKQYPQYTSNPMVTAHLKQTYPQLYYNSNVNAHNNNNNSNNNNNNNNNSNNNNNLYNQTQFSTRYFNSNSSPSLTSSTSNSSSPYNQSTFEYIL',
-                    'PSVQHRYMEGFSNNNNKQYRQNRNYNNNNNNSNNNHGSNYNNFNNGNSYIKGWNKNFNKYRRPSSSSYTGKSPLSRYNMSYNHNNNSSINGY',
-                    'MFGIRSGNNNGGFTNLTSQAPQTTQMEQSQSQLQPQPQPQPQQQQQHLQFNGSSDASSLRFGNSLSNTVNANNYSSNIGNNSINNNNIKNGTNNISQHGQGNNPSW',
-                    'ILPKPSPNSANSQQFNMNMNLMNTTNNVSAGNSVASSPRIISSANFNSNSPLQQNLLSNSFQRQGMNIPRRKMSRNASYSSSFMAASLQQLHEQQQVDVNSNTNTNSNRQNWNSSNSVSTNSRSSNFVSQ',
-                    'PPPSITQESKFRPFLQQAQQPQQVQQSQQPQQIQQLQQLQFPQQLRAPLQQPMLQQQMHPQQASPTFPSYDPRIRNNGQNGNQFFNLIFDNRTGVNGFEVDAANNNGNGNDQNMNINPAVQQQRYQDRNFASSSYQQPLQPLTQDQQQEQYFQQQKLAQQQQQQQQQQQQQQQLPPQNPFGDPLTSSSSGANLSV',
-                    'QKGNNGRMVIKLPNANAPNGSNNGNGSNNNNHPYPFGSGSSPLFSATQPYIATPLQPSNIPGGPFQQNTSFLAQRQTQQYQQMSFKKQSQTVPL',
-                    'PIIIADHFSGNNNIAPNYRYNNNINNNNNNINNMTNNRYNINNNINGNGNGNGNNSNNNNNHNNNHNNNHHNGSINSNSNTNNNNNNNNGNNSNNCNSNIGMGGCGSNM'
-                    ]
-
-aminoacidDict = dict(zip(sequence_labels, sample_sequences))
+aminoacidDict = dict(zip(sample_labels, sample_sequences))
 
 default_seq = sample_sequences[-3]
-default_seq_id = sequence_labels[-3]
+default_seq_id = sample_labels[-3]
 
 # Function Declarations
 
@@ -111,6 +60,7 @@ def window_score(sequence, position, aa_dict, ignore_consecutive_prolines=False)
 
     Parameters:
         sequence: An amino acid sequence
+        position: ith or leftmost position of sliding window
         aa_dict: The dictionary containing the appropriate log-odds value for the algorithm being performed on sequence.
         ignore_consecutive_prolines:
 
@@ -155,14 +105,14 @@ def super_window_scores(sequence, window_scores, fold_index_scores=None):
 
     Parameters:
         sequence: An amino acid sequence
-        window_scores: The dictionary containing the appropriate log-odds value for the algorithm being performed on sequence.
+        window_scores: The dictionary containing the log-odds value for the algorithm being performed on sequence.
         fold_index_scores: Ignore FoldIndex scores when performing analysis.
 
     Returns: list of weighted window scores of a particular algorithm in the given sequence.
     """
     scores = []
     for i in range(len(sequence) - window_size):
-        if (fold_index_scores is not None and fold_index_scores[i] > 0):
+        if fold_index_scores is not None and fold_index_scores[i] > 0:
             scores.append(None)
         else:
             score = 0.0
@@ -181,9 +131,6 @@ def fold_index(sequence):
 
     Parameters:
         sequence: An amino acid sequence
-        aa_dict: The dictionary containing the appropriate log-odds value for the algorithm being performed on sequence.
-        ignore_consecutive_prolines:
-
     Returns: list of FoldIndex scores for all windows in the given sequence.
     """
     charges = window_scores(sequence, charge)
@@ -199,9 +146,6 @@ def prima_score(sequence):
 
     Parameters:
         sequence: An amino acid sequence
-        aa_dict: The dictionary containing the appropriate log-odds value for the algorithm being performed on sequence.
-        ignore_consecutive_prolines:
-
     Returns: list of PRIMA scores for all windows in the given sequence.
     """
     maintenance_scores = window_scores(sequence, maintenance)
@@ -215,8 +159,6 @@ def classify(sequence, ignore_fold_index=True):
     """
 
     fold_index_list = fold_index(sequence)
-    # print 'number of positions with negative fold index', sum([1 for f in fold_index_list if f < 0]), 'out of', len(sequence)
-
     prima_score_list = prima_score(sequence)
 
     window_propensities = window_scores(sequence, propensities, True)
@@ -271,7 +213,7 @@ def analyze(sequence, sequence_id):
                           columns=['Sequence_ID'])
     df3 = pd.concat([seq_df, df2, df], axis=1)
 
-    return (df3)
+    return df3
 
 
 # TODO Attempt to refactor into lambda function
@@ -355,7 +297,8 @@ app.layout = html.Div(children=[
     html.H1(children='Prion Maintenance Collaborative Project (PRIMCOP)'),
 
     html.Div(children='''
-        A Dash-powered WebApp allowing for the prediction of the intrinsic foldedness (FoldIndex), prion aggregation propensity (PAPA), and prion maintenance propensity(PRIMA) of an amino acid sequence.
+        A Dash-powered WebApp allowing for the prediction of the intrinsic foldedness (FoldIndex),
+        prion aggregation propensity (PAPA), and prion maintenance propensity (PRIMA) of an amino acid sequence.
     '''),
 
     html.H4(children='Sample Sequences'),
