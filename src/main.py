@@ -74,7 +74,6 @@ def classify(sequence, ignore_fold_index=True):
     else:
         scores = super_window_scores(sequence, window_propensities, fold_index_list)
     max_score = max(scores)
-    print(max_score)
     max_position = scores.index(max_score)
     # the case when no window had a negative foldIndex
     if max_score is None:
