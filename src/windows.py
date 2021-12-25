@@ -12,7 +12,7 @@ default_seq_id = sample_labels[-3]
 # Function Declarations
 
 
-def get_window(sequence, position) -> tuple:
+def get_window(sequence: str, position: int) -> tuple:
     """
     Determines sliding window position and contents.
 
@@ -28,7 +28,10 @@ def get_window(sequence, position) -> tuple:
 
 
 def window_score(
-    sequence, position, aa_dict, ignore_consecutive_prolines=False
+    sequence: str,
+    position: int,
+    aa_dict: dict,
+    ignore_consecutive_prolines: bool = False,
 ) -> float:
     """
     Applies analysis algorithm (FoldIndex, PAPA or PRIMA) on a sequence slice, calculating a single window score.
@@ -61,7 +64,9 @@ def window_score(
     return score / (end - start)
 
 
-def window_scores(sequence, aa_dict, ignore_consecutive_prolines=False) -> list:
+def window_scores(
+    sequence: str, aa_dict: dict, ignore_consecutive_prolines: bool = False
+) -> list:
     """
     Performs 1 of 3 algorithmic analyses (FoldIndex, PAPA, PRIMA) on a sequence and generates list of all window scores.
 
@@ -79,7 +84,9 @@ def window_scores(sequence, aa_dict, ignore_consecutive_prolines=False) -> list:
     ]
 
 
-def super_window_scores(sequence, window_scores, fold_index_scores=None) -> list:
+def super_window_scores(
+    sequence: str, window_scores: list, fold_index_scores: bool = None
+) -> list:
     """
     Takes weighted average of window scores for a given sequence.
 

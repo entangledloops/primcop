@@ -22,15 +22,16 @@ __status__ = "Development"
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
+import hydra
 import numpy as np
 import pandas as pd
 import plotly.graph_objs as go
 
-from prions import *  # import dictionaries with prion characteristic data for individual amino acids
+# from prions import *  # import dictionaries with prion characteristic data for individual amino acids
 from windows import *  # import functions for calculating window scores
 
 
-def fold_index(sequence):
+def fold_index(sequence: str):
     """
     Calculates FoldIndex scores for all windows in a given sequence.
 
@@ -47,7 +48,7 @@ def fold_index(sequence):
     return super_window_scores(sequence, fold_index_list)
 
 
-def prima_score(sequence):
+def prima_score(sequence: str) -> tuple:
     """
     Calculates PRIMA scores for all windows in a given sequence.
 
@@ -60,7 +61,7 @@ def prima_score(sequence):
     return super_window_scores(sequence, prima_score_list)
 
 
-def classify(sequence, ignore_fold_index=True):
+def classify(sequence: str, ignore_fold_index: bool = True) -> tuple:
     """
     Scan sequence for potential prion activity, assigning window- and sequence-level scores 
     """
@@ -82,7 +83,8 @@ def classify(sequence, ignore_fold_index=True):
 
     max_prima_score = max(prima_score_list)
     max_prima_position = prima_score_list.index(max_prima_score)
-    # the case when no window had a negative foldIndex
+    # ? the case when no window had a negative foldIndex
+    # TODO: Confirm if this is necessary with Maclea
     if max_prima_score is None:
         max_prima_score = -1.0
         max_prima_position = -1
@@ -98,7 +100,7 @@ def classify(sequence, ignore_fold_index=True):
     )
 
 
-def analyze(sequence, sequence_id):
+def analyze(sequence: str, sequence_id: str) -> pd.DataFrame:
     """
     Doc String Placeholder
     """
@@ -128,12 +130,13 @@ def analyze(sequence, sequence_id):
     seq_id_column = sequence_id * (len(sequence) - window_size)
     seq_df = pd.DataFrame(data=seq_id_column, columns=["Sequence_ID"])
     df3 = pd.concat([seq_df, df2, df], axis=1)
+    print(df3)
 
     return df3
 
 
 # TODO Attempt to refactor into lambda function
-def setrange(lows, highs):
+def setrange(lows: list, highs: list) -> tuple:
     """
     Establishes range of value scale from -|max dev| to + |max dev|. Scales graphs correctly.
     """

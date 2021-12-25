@@ -127,6 +127,7 @@ maintenance = {
     "Y": 1.03,
 }
 
+# Sample protein sequences and names
 sample_labels = [
     "Ure2",
     "Sup35",
