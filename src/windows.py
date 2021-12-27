@@ -1,17 +1,11 @@
 from prions import *
 
-# Default window size
-window_size = 41
+# Variables
+window_size = 41  # empirically identified default window size
 half_window_size = int(window_size / 2)
 
-aminoacidDict = dict(zip(sample_labels, sample_sequences))
-
-default_seq = sample_sequences[-3]
-default_seq_id = sample_labels[-3]
 
 # Function Declarations
-
-
 def get_window(sequence: str, position: int) -> tuple:
     """
     Determines sliding window position and contents.

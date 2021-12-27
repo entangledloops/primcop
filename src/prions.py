@@ -7,7 +7,7 @@ File with dictionaries detailing amino acid characteristics relevant to prion fo
 # Single character IUPAC codes for all possible amino acids
 amino_acids = "ACDEFGHIKLMNPQRSTVWY"
 
-# Names of possible amino acid residues
+# Names of amino acid residues
 names = {
     "A": "Alanine",
     "C": "Cysteine",
@@ -31,8 +31,8 @@ names = {
     "Y": "Tyrosine",
 }
 
-# Propensity scores for all individual amino acids
-propensities = {
+# Propensity scores
+propensity = {
     "A": -0.396490246,
     "C": 0.415164505,
     "D": -1.276997939,
@@ -55,7 +55,7 @@ propensities = {
     "Y": 0.77865336,
 }
 
-# Hydrophobicity scores for all individual amino acids
+# Hydrophobicity scores
 hydrophobicity = {
     "A": 0.7,
     "C": 0.777777778,
@@ -103,7 +103,7 @@ charge = {
     "Y": 0,
 }
 
-# Maintenance scores for all individual amino acids
+# Maintenance scores
 maintenance = {
     "A": 0.28,
     "C": 0.45,
@@ -169,5 +169,8 @@ sample_sequences = [
     "QKGNNGRMVIKLPNANAPNGSNNGNGSNNNNHPYPFGSGSSPLFSATQPYIATPLQPSNIPGGPFQQNTSFLAQRQTQQYQQMSFKKQSQTVPL",
     "PIIIADHFSGNNNIAPNYRYNNNINNNNNNINNMTNNRYNINNNINGNGNGNGNNSNNNNNHNNNHNNNHHNGSINSNSNTNNNNNNNNGNNSNNCNSNIGMGGCGSNM",
 ]
+
+default_seq = sample_sequences[-3]
+default_seq_id = sample_labels[-3]
 
 # samples = dict(enumerate(zip(sample_labels, sample_sequences), start=1))

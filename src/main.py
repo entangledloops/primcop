@@ -30,10 +30,15 @@ import plotly.graph_objs as go
 # from prions import *  # import dictionaries with prion characteristic data for individual amino acids
 from windows import *  # import functions for calculating window scores
 
+# Create dictionary of sample data for generating sample plots
+samples = dict(zip(sample_labels, sample_sequences))
 
-def fold_index(sequence: str):
+
+def get_fold_index_scores(sequence: str) -> list:
     """
     Calculates FoldIndex scores for all windows in a given sequence.
+    Positive(+) FoldIndex scores represent proteins/domains that are likely folded.
+    Negative(-) FoldIndex scores represent proteins/domains that are likely intrinsically unfolded.
 
     Parameters:
         sequence: An amino acid sequence
@@ -45,42 +50,48 @@ def fold_index(sequence: str):
         2.785 * hydrophobicities[i] - abs(charges[i]) - 1.151
         for i in range(len(sequence))
     ]
-    return super_window_scores(sequence, fold_index_list)
+    fold_index_list = super_window_scores(sequence, fold_index_list)
+    min_fold_index_score = min(fold_index_list)
+    min_fold_index_position = fold_index_list.index(min_fold_index_score)
+    return (min_fold_index_score, min_fold_index_position, fold_index_list)
 
 
-def prima_score(sequence: str) -> tuple:
+def get_papa_scores(sequence: str, ignore_fold_index: bool = True) -> list:
+    """
+    Calculates PAPA scores for all windows in a given sequence.
+
+    Parameters:
+        sequence: An amino acid sequence
+    Returns: list of PAPA scores for all windows in the given sequence.
+    """
+    fold_index_scores = get_fold_index_scores(sequence)[2]
+    papa_scores = window_scores(sequence, propensity, True)
+    if ignore_fold_index:
+        papa_score_list = super_window_scores(sequence, papa_scores)
+        print(papa_score_list)
+    else:
+        papa_score_list = super_window_scores(
+            sequence, papa_scores, fold_index_scores=fold_index_scores
+        )
+    max_papa_score = max(papa_score_list)
+    max_papa_position = papa_score_list.index(max_papa_score)
+    # the case when no window had a negative foldIndex
+    if max_papa_score is None:
+        max_papa_score = -1.0
+        max_papa_position = -1
+
+    return (max_papa_score, max_papa_position, papa_score_list)
+
+
+def get_prima_scores(sequence: str) -> list:
     """
     Calculates PRIMA scores for all windows in a given sequence.
-
     Parameters:
         sequence: An amino acid sequence
     Returns: list of PRIMA scores for all windows in the given sequence.
     """
     maintenance_scores = window_scores(sequence, maintenance)
     prima_score_list = [maintenance_scores[i] for i in range(len(sequence))]
-    return super_window_scores(sequence, prima_score_list)
-
-
-def classify(sequence: str, ignore_fold_index: bool = True) -> tuple:
-    """
-    Scan sequence for potential prion activity, assigning window- and sequence-level scores 
-    """
-
-    fold_index_list = fold_index(sequence)
-    prima_score_list = prima_score(sequence)
-
-    window_propensities = window_scores(sequence, propensities, True)
-    if ignore_fold_index:
-        scores = super_window_scores(sequence, window_propensities)
-    else:
-        scores = super_window_scores(sequence, window_propensities, fold_index_list)
-    max_score = max(scores)
-    max_position = scores.index(max_score)
-    # the case when no window had a negative foldIndex
-    if max_score is None:
-        max_score = -1.0
-        max_position = -1
-
     max_prima_score = max(prima_score_list)
     max_prima_position = prima_score_list.index(max_prima_score)
     # ? the case when no window had a negative foldIndex
@@ -88,39 +99,46 @@ def classify(sequence: str, ignore_fold_index: bool = True) -> tuple:
     if max_prima_score is None:
         max_prima_score = -1.0
         max_prima_position = -1
-
     return (
-        max_score,
-        max_position,
-        scores,
-        fold_index_list,
-        prima_score_list,
         max_prima_score,
         max_prima_position,
+        super_window_scores(sequence, prima_score_list),
     )
 
 
-def analyze(sequence: str, sequence_id: str) -> pd.DataFrame:
+def assess_sequence(sequence: str) -> tuple:
     """
-    Doc String Placeholder
+    Scan sequence for potential prion activity, assigning window- and sequence-level scores 
+    """
+
+    fold_index_list = get_fold_index_scores(sequence)
+    prima_score_list = get_prima_scores(sequence)
+    papa_score_list = get_papa_scores(sequence)
+
+    return (
+        get_fold_index_scores(sequence),
+        get_papa_scores(sequence),
+        get_prima_scores(sequence),
+    )
+
+
+def run_analysis(sequence: str, sequence_id: str) -> pd.DataFrame:
+    """
+    Create dataframe report of prionic activity to inform plots
     """
     sequence_id = [sequence_id]
     # ? Why are score, pos, prima_score and prima_position unused?
-    (
-        score,
-        pos,
-        scores,
-        fold_indexes,
-        prima_scores,
-        prima_score,
-        prima_position,
-    ) = classify(sequence)
-    n_columns = 4
-    arr = np.empty(((len(sequence) - window_size), n_columns))
-    for i, s in enumerate(scores):
-        arr[i, :] = [i + 1, s, prima_scores[i], fold_indexes[i]]
+
+    elements = assess_sequence(sequence)
+    seq_papa_score, papa_pos, papa_scores = elements[1]
+    seq_fold_index_score, fold_index_pos, fold_index_scores = elements[0]
+    seq_prima_score, prima_pos, prima_scores = elements[2]
+
+    array = np.empty(((len(sequence) - window_size), 4))
+    for i, s in enumerate(papa_scores):
+        array[i, :] = [i + 1, s, prima_scores[i], fold_index_scores[i]]
     df = pd.DataFrame(
-        data=arr,
+        data=array,
         columns=["Sequence Position", "PAPA score", "PRIMA score", "FoldIndex score"],
     )
 
@@ -153,13 +171,13 @@ def setrange(lows: list, highs: list) -> tuple:
 
 app = dash.Dash()  # creates Dash app
 
-df = analyze(default_seq, default_seq_id)
+df = run_analysis(default_seq, default_seq_id)
 
-min_scores = df[["PAPA score", "PRIMA score", "FoldIndex score"]].min().tolist()
-max_scores = df[["PAPA score", "PRIMA score", "FoldIndex score"]].max().tolist()
+lower_bounds = df[["PAPA score", "PRIMA score", "FoldIndex score"]].min().tolist()
+upper_bounds = df[["PAPA score", "PRIMA score", "FoldIndex score"]].max().tolist()
 
 
-score_ranges = setrange(min_scores, max_scores)
+score_ranges = setrange(lower_bounds, upper_bounds)
 papa_y_range = score_ranges[0]
 prima_y_range = score_ranges[1]
 fold_index_y_range = score_ranges[2]
@@ -225,7 +243,7 @@ app.layout = html.Div(
         dcc.Dropdown(
             id="my-dropdown",
             placeholder="Please select sample protein sequence from the Alberti et al. dataset below. Ure2 is currently selected.",
-            options=[{"label": k, "value": v} for k, v in aminoacidDict.items()],
+            options=[{"label": k, "value": v} for k, v in samples.items()],
             value="placeholder",
         ),
         html.Div(id="output-container"),
@@ -279,11 +297,11 @@ app.layout = html.Div(
 def update_figure(value):
     if value == "placeholder":
         value = default_seq
-    seq_id = [seq_id for seq_id, seq_val in aminoacidDict.items() if seq_val == value]
+    seq_id = [seq_id for seq_id, seq_val in samples.items() if seq_val == value]
     upd_sequence_id = seq_id
     upd_sequence = value
     print(f"Update Sequence: {upd_sequence}")
-    df = analyze(upd_sequence, upd_sequence_id)
+    df = run_analysis(upd_sequence, upd_sequence_id)
 
     min_scores = df[["PAPA score", "PRIMA score", "FoldIndex score"]].min().tolist()
     max_scores = df[["PAPA score", "PRIMA score", "FoldIndex score"]].max().tolist()
