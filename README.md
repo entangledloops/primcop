@@ -5,7 +5,7 @@ This interactive web app was created for the visual analysis of Q/N-rich amino a
 ## Built With
 
 <img width="400" height= "250" src="/images/logos/djangologo.jpg">
-<img width="400" height= "250" src="/images/logos/pglogo.pngg">
+<img width="400" height= "250" src="/images/logos/pglogo.png">
 <img width="400" height= "250" src="/images/logos/Plotly_Dash_logo.png">
 
 ## License
