@@ -4,9 +4,9 @@ This interactive web app was created for the visual analysis of Q/N-rich amino a
 
 ## Built With
 
-- ![Django](./images/logos/djlogo.jpg)
+- ![Django](./images/logos/djangologo.jpg)
 - ![PostGreSQL](./images/logos/pglogo.png)
-- ![Plotly Dash](./images/logos/pdlogo.png)
+- ![Plotly Dash](./images/logos/Plotly_Dash_logo.png)
 
 ## License
 
