@@ -92,10 +92,10 @@ def render(app: Dash) -> html.Div:
                     overlaying="y",
                     side="right",
                 ),
-                legend={"x": -0.25, "y": 1},
+                legend={"x": -0.15, "y": 1},
                 hovermode="closest",
             ),
         }
-        return dcc.Graph(figure=fig, id=ids.SCATTER_PLOT)
+        return dcc.Graph(figure=fig)
 
     return html.Div(id=ids.SCATTER_PLOT)
