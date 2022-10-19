@@ -1,4 +1,5 @@
 from src.characteristics import amino_acids, propensity, hydrophobicity, charge, maintenance
+from src.sample_data import samples_dict
 import numpy as np
 import pandas as pd
 
@@ -212,6 +213,12 @@ def analyze_sequence(sequence: str, sequence_id: str) -> pd.DataFrame:
     aa_df = pd.DataFrame(data=seq_list[: len(sequence) - window_size], columns=["Amino Acid"])
     df = pd.concat([seq_id_col, aa_df, score_df], axis=1)
     return df
+
+def update_df(value) -> pd.DataFrame:
+        sequence = value
+        sequence_id = [seq_id for seq_id, seq_val in samples_dict.items() if seq_val == value]
+        df = analyze_sequence(sequence, sequence_id)
+        return df
 
 
 def set_range(lows: list, highs: list) -> tuple:

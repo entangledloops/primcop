@@ -1,7 +1,7 @@
 from dash import Dash
 import dash_html_components as html
 
-from . import scatter_plot, sequence_dropdown
+from . import scatter_plot, sequence_dropdown, table
 
 
 def create_layout(app: Dash) -> html.Div:
@@ -17,6 +17,7 @@ def create_layout(app: Dash) -> html.Div:
                 ],
             ),
             scatter_plot.render(app),
-            html.H5("The div after the chart.")
+            html.H4("Prion Aggregation Propensity, Prion Maintenenance and FoldIndex Scores."),
+            table.render(app)
         ]
     )

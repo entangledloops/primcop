@@ -4,7 +4,7 @@ import dash_html_components as html
 from dash.dependencies import Input, Output
 import plotly.graph_objs as go
 
-import src.analysis as a
+import src.analysis as analysis
 from src.sample_data import samples_dict
 
 from . import ids
@@ -15,10 +15,8 @@ def render(app: Dash) -> html.Div:
         Input(ids.SEQUENCE_DROPDOWN, "value"),
     )
     def update_scatter_plot(value) -> dcc.Graph:
-        sequence = value
-        sequence_id = [seq_id for seq_id, seq_val in samples_dict.items() if seq_val == value]
-        df = a.analyze_sequence(sequence, sequence_id)
-        papa_y_range, prima_y_range, fold_index_y_range = a.get_ranges(df)
+        df = analysis.update_df(value)
+        papa_y_range, prima_y_range, fold_index_y_range = analysis.get_ranges(df)
         main_plot = [
             go.Scatter(
                 x=df[df["Sequence_ID"] == i]["Sequence Position"],
