@@ -10,25 +10,17 @@ understanding of prion proteins, using wet lab and computational approaches. The
     Prion Maintenance Algorithm (PRIMA) - measures likelihood that a prion will 'maintain' or transfect another prion.
 """
 
-__author__ = "William Rivera"
-__credits__ = ["William Rivera", "Kyle Maclea", "Raghava Adusimilli", "Stephen Dunn"]
-__license__ = "MIT"
-__version__ = "0.1.1"
-__maintainer__ = "William Rivera"
-__email__ = "wto3@wildcats.unh.edu"
-__status__ = "Development"
-
-
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
-import hydra
 import numpy as np
 import pandas as pd
 import plotly.graph_objs as go
 
 # from prions import *  # import dictionaries with prion characteristic data for individual amino acids
 from windows import *  # import functions for calculating window scores
+
+import components
 
 # Create dictionary of sample data for generating sample plots
 samples = dict(zip(sample_labels, sample_sequences))
@@ -108,7 +100,7 @@ def get_prima_scores(sequence: str) -> list:
 
 def assess_sequence(sequence: str) -> tuple:
     """
-    Scan sequence for potential prion activity, assigning window- and sequence-level scores 
+    Scan sequence for potential prion activity, assigning window- and sequence-level scores
     """
 
     fold_index_list = get_fold_index_scores(sequence)
@@ -116,9 +108,9 @@ def assess_sequence(sequence: str) -> tuple:
     papa_score_list = get_papa_scores(sequence)
 
     return (
-        get_fold_index_scores(sequence),
-        get_papa_scores(sequence),
-        get_prima_scores(sequence),
+        fold_index_list,
+        prima_score_list,
+        papa_score_list,
     )
 
 
@@ -153,83 +145,7 @@ def run_analysis(sequence: str, sequence_id: str) -> pd.DataFrame:
     return df3
 
 
-# TODO Attempt to refactor into lambda function
-def setrange(lows: list, highs: list) -> tuple:
-    """
-    Establishes range of value scale from -|max dev| to + |max dev|. Scales graphs correctly.
-    """
-    ranges = []
-    for a, b in zip(lows, highs):
-        if abs(a) > abs(b):
-            temp = [-abs(a) - 0.05, abs(a) + 0.05]
-            ranges.append(temp)
-        else:
-            temp = [-abs(b) - 0.05, abs(b) + 0.05]
-            ranges.append(temp)
-    return ranges
-
-
 app = dash.Dash()  # creates Dash app
-
-df = run_analysis(default_seq, default_seq_id)
-
-lower_bounds = df[["PAPA score", "PRIMA score", "FoldIndex score"]].min().tolist()
-upper_bounds = df[["PAPA score", "PRIMA score", "FoldIndex score"]].max().tolist()
-
-
-score_ranges = setrange(lower_bounds, upper_bounds)
-papa_y_range = score_ranges[0]
-prima_y_range = score_ranges[1]
-fold_index_y_range = score_ranges[2]
-
-sc1 = [
-    go.Scatter(
-        x=df[df["Sequence_ID"] == i]["Sequence Position"],
-        y=df[df["Sequence_ID"] == i]["PAPA score"],
-        text=df[df["Sequence_ID"] == i]["Amino Acid"],
-        mode="lines+markers",
-        fill="none",
-        opacity=0.7,
-        marker={"size": 10, "line": {"width": 0.5, "color": "white"}},
-        name="PAPA",
-        yaxis="y1",
-    )
-    for i in df.Sequence_ID.unique()
-]
-sc2 = [
-    go.Scatter(
-        x=df[df["Sequence_ID"] == i]["Sequence Position"],
-        y=df[df["Sequence_ID"] == i]["PRIMA score"],
-        text=df[df["Sequence_ID"] == i]["Amino Acid"],
-        mode="lines+markers",
-        fill="none",
-        opacity=0.7,
-        marker={"size": 10, "line": {"width": 0.5, "color": "white"}},
-        name="PRIMA",
-        yaxis="y2",
-    )
-    for i in df.Sequence_ID.unique()
-]
-sc3 = [
-    go.Bar(
-        x=df[df["Sequence_ID"] == i]["Sequence Position"],
-        y=df[df["Sequence_ID"] == i]["FoldIndex score"],
-        text=df[df["Sequence_ID"] == i]["Amino Acid"],
-        # mode='lines+markers',
-        # fill='none',
-        opacity=0.7,
-        # marker={
-        #    'size': 10,
-        #    'line': {'width': 0.5, 'color': 'white'}
-        # },
-        name="FoldIndex",
-        yaxis="y3",
-    )
-    for i in df.Sequence_ID.unique()
-]
-sc1.extend(sc2)
-sc1.extend(sc3)
-
 app.layout = html.Div(
     children=[
         html.H1(children="Prion Maintenance Collaborative Project (PRIMCOP)"),
@@ -249,41 +165,7 @@ app.layout = html.Div(
         html.Div(id="output-container"),
         dcc.Graph(
             id="prion-analysis",
-            figure={
-                "data": sc1,
-                "layout": go.Layout(
-                    title="Prion Analysis Curves",
-                    xaxis={"title": "Amino Acid Position in Sequence"},
-                    yaxis=dict(
-                        title="PAPA",
-                        range=papa_y_range,
-                        titlefont=dict(color="#1f77b4"),
-                        tickfont=dict(color="#1f77b4"),
-                    ),
-                    yaxis2=dict(
-                        title="PRIMA",
-                        range=prima_y_range,
-                        titlefont=dict(color="#ff7f0e"),
-                        tickfont=dict(color="#ff7f0e"),
-                        anchor="free",
-                        overlaying="y",
-                        side="left",
-                        position=0.50,
-                    ),
-                    yaxis3=dict(
-                        title="FoldIndex",
-                        range=fold_index_y_range,
-                        titlefont=dict(color="#6abc6a"),
-                        tickfont=dict(color="#6abc6a"),
-                        anchor="x",
-                        overlaying="y",
-                        side="right",
-                    ),
-                    # margin={'l': 40, 'b': 40, 't': 10, 'r': 10},
-                    legend={"x": -0.1, "y": 1},
-                    hovermode="closest",
-                ),
-            },
+            figure=components.get_figure(run_analysis(default_seq, default_seq_id))
         ),
     ]
 )
@@ -302,92 +184,7 @@ def update_figure(value):
     upd_sequence = value
     print(f"Update Sequence: {upd_sequence}")
     df = run_analysis(upd_sequence, upd_sequence_id)
-
-    min_scores = df[["PAPA score", "PRIMA score", "FoldIndex score"]].min().tolist()
-    max_scores = df[["PAPA score", "PRIMA score", "FoldIndex score"]].max().tolist()
-    score_ranges = setrange(min_scores, max_scores)
-    papa_y_range = score_ranges[0]
-    prima_y_range = score_ranges[1]
-    fold_index_y_range = score_ranges[2]
-
-    traces = [
-        go.Scatter(
-            x=df[df["Sequence_ID"] == i]["Sequence Position"],
-            y=df[df["Sequence_ID"] == i]["PAPA score"],
-            text=df[df["Sequence_ID"] == i]["Amino Acid"],
-            mode="lines+markers",
-            fill="none",
-            opacity=0.7,
-            marker={"size": 10, "line": {"width": 0.5, "color": "white"}},
-            name="PAPA",
-            yaxis="y1",
-        )
-        for i in df.Sequence_ID.unique()
-    ]
-    traces2 = [
-        go.Scatter(
-            x=df[df["Sequence_ID"] == i]["Sequence Position"],
-            y=df[df["Sequence_ID"] == i]["PRIMA score"],
-            text=df[df["Sequence_ID"] == i]["Amino Acid"],
-            mode="lines+markers",
-            fill="none",
-            opacity=0.7,
-            marker={"size": 10, "line": {"width": 0.5, "color": "white"}},
-            name="PRIMA",
-            yaxis="y2",
-        )
-        for i in df.Sequence_ID.unique()
-    ]
-    traces3 = [
-        go.Bar(
-            x=df[df["Sequence_ID"] == i]["Sequence Position"],
-            y=df[df["Sequence_ID"] == i]["FoldIndex score"],
-            text=df[df["Sequence_ID"] == i]["Amino Acid"],
-            opacity=0.7,
-            marker_color="red",
-            name="FoldIndex",
-            yaxis="y3",
-        )
-        for i in df.Sequence_ID.unique()
-    ]
-    traces.extend(traces2)
-    traces.extend(traces3)
-
-    return {
-        "data": traces,
-        "layout": go.Layout(
-            title="Prion Analysis Curves",
-            xaxis={"title": "Amino Acid Position in Sequence"},
-            yaxis=dict(
-                title="PAPA",
-                range=papa_y_range,
-                titlefont=dict(color="#1f77b4"),
-                tickfont=dict(color="#1f77b4"),
-            ),
-            yaxis2=dict(
-                title="PRIMA",
-                range=prima_y_range,
-                titlefont=dict(color="#ff7f0e"),
-                tickfont=dict(color="#ff7f0e"),
-                anchor="free",
-                overlaying="y",
-                side="left",
-                position=0.20,
-            ),
-            yaxis3=dict(
-                title="FoldIndex",
-                range=fold_index_y_range,
-                titlefont=dict(color="#FF0000"),
-                tickfont=dict(color="#FF0000"),
-                anchor="x",
-                overlaying="y",
-                side="right",
-            ),
-            # margin={'l': 40, 'b': 40, 't': 10, 'r': 10},
-            legend={"x": -0.1, "y": 1},
-            hovermode="closest",
-        ),
-    }
+    return components.get_figure(df)
 
 
 if __name__ == "__main__":
