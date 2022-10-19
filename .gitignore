@@ -6,3 +6,4 @@
 /papers/
 /database/
 /db/
+*.pyc
