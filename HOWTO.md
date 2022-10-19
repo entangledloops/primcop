@@ -8,15 +8,8 @@ See deployment for notes on how to deploy the project on a live system.
 What things you need to install the software and how to install them.
 This list can also be found in requirements.txt.
 
-```text
-dash
-dash_core_components
-dash_html_components
-django
-flask
-numpy
-pandas
-plotly
+```console
+pip install -r requirements.txt
 ```
 
 ### Installing
