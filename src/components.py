@@ -49,7 +49,7 @@ def get_analysis_components(df) -> list:
             x=pos,
             y=seq[PAPA_SCORE],
             text=amino_acid,
-            name=PRIMA,
+            name=PAPA,
             yaxis="y1",
         )
         papas.append(papa_scatter)
@@ -92,7 +92,7 @@ def setrange(lows: list, highs: list) -> tuple:
     return ranges
 
 
-def get_figure(df):
+def get_analysis_figure(df):
     scores = df[[PAPA_SCORE, PRIMA_SCORE, FOLD_INDEX_SCORE]]
     lower_bounds = scores.min().tolist()
     upper_bounds = scores.max().tolist()

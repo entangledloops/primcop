@@ -165,7 +165,7 @@ app.layout = html.Div(
         html.Div(id="output-container"),
         dcc.Graph(
             id="prion-analysis",
-            figure=components.get_figure(run_analysis(default_seq, default_seq_id))
+            figure=components.get_analysis_figure(run_analysis(default_seq, default_seq_id))
         ),
     ]
 )
@@ -184,7 +184,7 @@ def update_figure(value):
     upd_sequence = value
     print(f"Update Sequence: {upd_sequence}")
     df = run_analysis(upd_sequence, upd_sequence_id)
-    return components.get_figure(df)
+    return components.get_analysis_figure(df)
 
 
 if __name__ == "__main__":
