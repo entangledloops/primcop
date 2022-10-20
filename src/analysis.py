@@ -122,8 +122,7 @@ def get_fold_index_scores(sequence: str) -> list:
     charges = calculate_window_scores(sequence, CHARGE)
     hydrophobicities = calculate_window_scores(sequence, HYDROPHOBICITY)
     fold_index_scores = [
-        2.785 * hydrophobicities[i] - abs(charges[i]) - 1.151
-        for i in range(len(sequence))
+        2.785 * h - abs(c) - 1.151 for h, c, in zip(hydrophobicities, charges)
     ]
     fold_index_scores = calculate_super_window_scores(sequence, fold_index_scores)
     return fold_index_scores
@@ -158,8 +157,7 @@ def get_prima_scores(sequence: str) -> list:
     Returns: list of PRIMA scores for all windows in the given sequence.
     """
     maintenance_scores = calculate_window_scores(sequence, MAINTENANCE)
-    prima_scores = [maintenance_scores[i] for i in range(len(sequence))]
-    return calculate_super_window_scores(sequence, prima_scores)
+    return calculate_super_window_scores(sequence, maintenance_scores)
 
 
 SCORE_METHODS = {
