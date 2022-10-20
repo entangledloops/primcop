@@ -5,7 +5,7 @@ from dash.dependencies import Input, Output
 import pandas as pd
 
 from . import ids
-from src.sample_data import samples_dict
+from src.sample_data import SAMPLES
 
 import src.analysis as analysis
 
@@ -15,7 +15,7 @@ def render(app: Dash) -> html.Div:
         Input(ids.SEQUENCE_DROPDOWN, "value")
     )
     def update_table(value, max_rows=10) -> html.Table:
-        table_df = analysis.update_df(value).round(4).drop(columns=["Sequence_ID"])
+        table_df = analysis.get_df(value).round(4)
 
         return html.Table([
             html.Thead(

@@ -3,10 +3,10 @@ File with amino acid characteristics relevant to prion formation and propagation
 """
 
 # Single character IUPAC codes for all possible amino acids
-amino_acids = "ACDEFGHIKLMNPQRSTVWY"
+AMINO_ACIDS = "ACDEFGHIKLMNPQRSTVWY"
 
 # Names of amino acid residues
-iupac_name = {
+IUPAC_NAME = {
     "A": "Alanine",
     "C": "Cysteine",
     "D": "Aspartic acid",
@@ -30,7 +30,7 @@ iupac_name = {
 }
 
 # Propensity scores
-propensity = {
+PROPENSITY = {
     "A": -0.396490246,
     "C": 0.415164505,
     "D": -1.276997939,
@@ -54,7 +54,7 @@ propensity = {
 }
 
 # Hydrophobicity scores
-hydrophobicity = {
+HYDROPHOBICITY = {
     "A": 0.7,
     "C": 0.777777778,
     "D": 0.111111111,
@@ -78,7 +78,7 @@ hydrophobicity = {
 }
 
 # Amino acid charge states
-charge = {
+CHARGE = {
     "A": 0,
     "C": 0,
     "D": -1,
@@ -102,7 +102,7 @@ charge = {
 }
 
 # Maintenance scores
-maintenance = {
+MAINTENANCE = {
     "A": 0.28,
     "C": 0.45,
     "D": -0.19,

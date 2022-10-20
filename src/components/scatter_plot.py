@@ -5,9 +5,34 @@ from dash.dependencies import Input, Output
 import plotly.graph_objs as go
 
 import src.analysis as analysis
-from src.sample_data import samples_dict
+from src.sample_data import SAMPLES
 
 from . import ids
+
+
+def get_scatter(**kwargs):
+    return go.Scatter(
+        **kwargs,
+        mode="lines+markers",
+        fill="none",
+        opacity=0.7,
+        marker={"size": 10, "line": {"width": 0.5, "color": "white"}},
+    )
+
+def get_bar(**kwargs):
+    return go.Bar(
+        **kwargs,
+        opacity=0.7,
+        marker_color="red",
+    )
+
+
+SCORE_METHODS_UI = {
+    analysis.PAPA: get_scatter,
+    analysis.PRIMA: get_scatter,
+    analysis.FOLD_INDEX: get_bar
+}
+
 
 def render(app: Dash) -> html.Div:
     @app.callback(
@@ -15,65 +40,32 @@ def render(app: Dash) -> html.Div:
         Input(ids.SEQUENCE_DROPDOWN, "value"),
     )
     def update_scatter_plot(value) -> dcc.Graph:
-        df = analysis.update_df(value)
-        papa_y_range, prima_y_range, fold_index_y_range = analysis.get_ranges(df)
-        main_plot = [
-            go.Scatter(
-                x=df[df["Sequence_ID"] == i]["Sequence Position"],
-                y=df[df["Sequence_ID"] == i]["PAPA score"],
-                text=df[df["Sequence_ID"] == i]["Amino Acid"],
-                mode="lines+markers",
-                fill="none",
-                opacity=0.7,
-                marker={"size": 10, "line": {"width": 0.5, "color": "white"}},
-                name="PAPA",
-                yaxis="y1",
+        df = analysis.get_df(value)
+        ranges = analysis.get_ranges(df)
+        plots = []
+        for i, k in enumerate(ranges.keys(), 1):
+            plot = SCORE_METHODS_UI[k](
+                x=df[analysis.SEQUENCE_POSITION],
+                y=df[k],
+                text=df[analysis.AMINO_ACID],
+                name=k,
+                yaxis=f"y{i}"
             )
-            for i in df.Sequence_ID.unique()
-        ]
-        sub_plot1 = [
-            go.Scatter(
-                x=df[df["Sequence_ID"] == i]["Sequence Position"],
-                y=df[df["Sequence_ID"] == i]["PRIMA score"],
-                text=df[df["Sequence_ID"] == i]["Amino Acid"],
-                mode="lines+markers",
-                fill="none",
-                opacity=0.7,
-                marker={"size": 10, "line": {"width": 0.5, "color": "white"}},
-                name="PRIMA",
-                yaxis="y2",
-            )
-            for i in df.Sequence_ID.unique()
-        ]
-        sub_plot2 = [
-            go.Bar(
-                x=df[df["Sequence_ID"] == i]["Sequence Position"],
-                y=df[df["Sequence_ID"] == i]["FoldIndex score"],
-                text=df[df["Sequence_ID"] == i]["Amino Acid"],
-                opacity=0.7,
-                marker_color="red",
-                name="FoldIndex",
-                yaxis="y3",
-            )
-            for i in df.Sequence_ID.unique()
-        ]
-        main_plot.extend(sub_plot1)
-        main_plot.extend(sub_plot2)
-
+            plots.append(plot)
         fig = {
-            "data": main_plot,
+            "data": plots,
             "layout": go.Layout(
                 title="Measures of Potential Prion Activity",
                 xaxis={"title": "Amino Acid Position in Sequence"},
                 yaxis=dict(
-                    title="PAPA",
-                    range=papa_y_range,
+                    title=analysis.PAPA,
+                    range=ranges[analysis.PAPA],
                     titlefont=dict(color="#1f77b4"),
                     tickfont=dict(color="#1f77b4"),
                 ),
                 yaxis2=dict(
-                    title="PRIMA",
-                    range=prima_y_range,
+                    title=analysis.PRIMA,
+                    range=ranges[analysis.PRIMA],
                     titlefont=dict(color="#ff7f0e"),
                     tickfont=dict(color="#ff7f0e"),
                     anchor="free",
@@ -82,8 +74,8 @@ def render(app: Dash) -> html.Div:
                     position=0.20,
                 ),
                 yaxis3=dict(
-                    title="FoldIndex",
-                    range=fold_index_y_range,
+                    title=analysis.FOLD_INDEX,
+                    range=ranges[analysis.FOLD_INDEX],
                     titlefont=dict(color="#FF0000"),
                     tickfont=dict(color="#FF0000"),
                     anchor="x",
