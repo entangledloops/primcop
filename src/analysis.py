@@ -1,7 +1,17 @@
-from src.characteristics import AMINO_ACIDS, PROPENSITY, HYDROPHOBICITY, CHARGE, MAINTENANCE
-from src.sample_data import SAMPLE_LABELS, SAMPLE_SEQUENCES, SAMPLES
+import collections
+
 import numpy as np
 import pandas as pd
+
+from src.characteristics import (
+    AMINO_ACIDS,
+    PROPENSITY,
+    HYDROPHOBICITY,
+    CHARGE,
+    MAINTENANCE,
+)
+from src.sample_data import SAMPLE_LABELS, SAMPLE_SEQUENCES
+
 
 # Constants
 WINDOW_SIZE = 41  # empirically identified default window size
@@ -22,77 +32,60 @@ def get_window_bounds(sequence: str, position: int) -> tuple:
         sequence: An amino acid sequence
         position: Starting or left-most index of window along sequence
 
-    Returns: A window (i.e., sequence slice) defined by its starting and ending position in the sequence.
+    Returns:
+        The (start, end) of a window s.t. ``(end-start) <= WINDOW_SIZE``.
     """
     start = max(position - (WINDOW_SIZE // 2), 0)
     end = min(len(sequence), position + (WINDOW_SIZE // 2) + 1)
     return start, end
 
 
-def calculate_window_score(
+def calculate_window_scores(
     sequence: str,
-    position: int,
     aa_dict: dict,
     ignore_consecutive_prolines: bool = False,
 ) -> float:
     """
-    Applies analysis algorithm (FoldIndex, PAPA or PRIMA) on a sequence slice, calculating a single window score.
+    Applies a sliding window over sequence, computing the average score of the window
+    as per the score mapping in ``aa_dict``. Returns a list of scores for all windows.
 
-    Parameters:
+    Args:
         sequence: An amino acid sequence
-        position: ith or leftmost position of sliding window
-        aa_dict: The dictionary containing the appropriate log-odds value for the algorithm being performed on sequence.
-        ignore_consecutive_prolines: Flag to instruct sliding window to either include or omit scores for windows containing prolines.
+        aa_dict: The dictionary containing the appropriate log-odds value for the
+            algorithm being performed on sequence.
+        ignore_consecutive_prolines: If consecutive residues in a sequence are
+            proline (P), do not apply algorithm.
 
-    Returns: calculated window score for a window in a given amino acid sequence.
+    Returns:
+        A list of window scores for all windows in a given amino acid sequence.
     """
-
-    start, end = get_window_bounds(sequence, position)
-    score = 0.0
-    for i in range(start, end):
-        if sequence[i] not in AMINO_ACIDS:
-            continue
-        if not ignore_consecutive_prolines:
-            score += aa_dict[sequence[i]]
-        else:
-            if sequence[i] != "P":
-                score += aa_dict[sequence[i]]
-            elif (i > 0 and sequence[i - 1] == "P") or (
-                i > 1 and sequence[i - 2] == "P"
+    scores = []
+    for pos in range(len(sequence)):
+        start, end = get_window_bounds(sequence, pos)
+        recent_acids = collections.deque(maxlen=3)
+        score = 0.0
+        for acid in sequence[start:end]:
+            recent_acids.append(acid)
+            if acid not in AMINO_ACIDS:
+                continue
+            if (
+                ignore_consecutive_prolines
+                and "P" == acid
+                and recent_acids.count("P") > 1
             ):
-                pass
-            else:
-                score += aa_dict[sequence[i]]
-    return score / (end - start)
-
-
-def calculate_window_scores(
-    sequence: str, aa_dict: dict, ignore_consecutive_prolines: bool = False
-) -> list:
-    """
-    Performs 1 of 3 algorithmic analyses (FoldIndex, PAPA, PRIMA) on a sequence and generates list of all window scores.
-
-    Parameters:
-        sequence: An amino acid sequence
-        aa_dict: The dictionary containing the appropriate log-odds value for the algorithm being performed on sequence.
-        ignore_consecutive_prolines: If consecutive residues in a sequence are proline (P), do not apply algorithm.
-
-    Returns: a list containing calculated window scores for all windows in a given amino acid sequence.
-    """
-
-    return [
-        calculate_window_score(sequence, i, aa_dict, ignore_consecutive_prolines)
-        for i in range(len(sequence))
-    ]
+                continue
+            score += aa_dict[acid]
+        scores.append(score / (end - start))
+    return scores
 
 
 def calculate_super_window_scores(
-    sequence: str, window_scores: list, fold_index_scores: bool = None
+    sequence: str, window_scores: list[float], fold_index_scores: bool = None
 ) -> list:
     """
     Takes weighted average of window scores for a given sequence.
 
-    Parameters:
+    Args:
         sequence: An amino acid sequence
         window_scores: The dictionary containing the log-odds value for the algorithm being performed on sequence.
         fold_index_scores: Ignore FoldIndex scores when performing analysis.
@@ -117,12 +110,14 @@ def calculate_super_window_scores(
 def get_fold_index_scores(sequence: str) -> list:
     """
     Calculates FoldIndex scores for all windows in a given sequence.
-    Positive(+) FoldIndex scores represent proteins/domains that are likely folded.
-    Negative(-) FoldIndex scores represent proteins/domains that are likely intrinsically unfolded.
+    Positive scores represent proteins/domains that are likely folded.
+    Negative scores represent proteins/domains that are likely intrinsically unfolded.
 
-    Parameters:
+    Args:
         sequence: An amino acid sequence
-    Returns: list of FoldIndex scores for all windows in the given sequence.
+
+    Returns:
+        List of FoldIndex scores for all windows in the given sequence.
     """
     charges = calculate_window_scores(sequence, CHARGE)
     hydrophobicities = calculate_window_scores(sequence, HYDROPHOBICITY)
@@ -140,9 +135,11 @@ def get_papa_scores(sequence: str, ignore_fold_index: bool = True) -> list:
     """
     Calculates PAPA scores for all windows in a given sequence.
 
-    Parameters:
+    Args:
         sequence: An amino acid sequence
-    Returns: list of PAPA scores for all windows in the given sequence.
+
+    Returns:
+        List of PAPA scores for all windows in the given sequence.
     """
     fold_index_scores = get_fold_index_scores(sequence)[2]
     papa_scores = calculate_window_scores(sequence, PROPENSITY, True)
@@ -184,11 +181,13 @@ def get_prima_scores(sequence: str) -> list:
         calculate_super_window_scores(sequence, prima_score_list),
     )
 
+
 SCORE_METHODS = {
     PAPA: get_papa_scores,
     PRIMA: get_prima_scores,
     FOLD_INDEX: get_fold_index_scores,
 }
+
 
 def analyze_sequence(sequence: str) -> pd.DataFrame:
     """
@@ -201,7 +200,12 @@ def analyze_sequence(sequence: str) -> pd.DataFrame:
 
     score_array = np.empty(((len(sequence) - WINDOW_SIZE), 4))
     for idx, papa_score in enumerate(papa_scores):
-        score_array[idx, :] = [idx + 1, papa_score, prima_scores[idx], fold_index_scores[idx]]
+        score_array[idx, :] = [
+            idx + 1,
+            papa_score,
+            prima_scores[idx],
+            fold_index_scores[idx],
+        ]
     score_df = pd.DataFrame(
         data=score_array,
         columns=[SEQUENCE_POSITION, *elements.keys()],
@@ -214,9 +218,13 @@ def get_df(sequence) -> pd.DataFrame:
     seq_id = SAMPLE_LABELS[SAMPLE_SEQUENCES.index(sequence)]
 
     # build a new dataframe
-    seq_id_col = pd.DataFrame(data=[seq_id] * (len(sequence) - WINDOW_SIZE), columns=[SEQUENCE_ID])
+    seq_id_col = pd.DataFrame(
+        data=[seq_id] * (len(sequence) - WINDOW_SIZE), columns=[SEQUENCE_ID]
+    )
     seq_list = list(sequence)
-    aa_df = pd.DataFrame(data=seq_list[: len(sequence) - WINDOW_SIZE], columns=[AMINO_ACID])
+    aa_df = pd.DataFrame(
+        data=seq_list[: len(sequence) - WINDOW_SIZE], columns=[AMINO_ACID]
+    )
     df = pd.concat([seq_id_col, aa_df, score_df], axis=1)
 
     return df

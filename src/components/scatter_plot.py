@@ -1,12 +1,12 @@
-from dash import Dash
+import dash
 import dash_core_components as dcc
 import dash_html_components as html
+from dash import Dash
 from dash.dependencies import Input, Output
 import plotly.graph_objs as go
 
 import src.analysis as analysis
 from src.sample_data import SAMPLES
-
 from . import ids
 
 
@@ -19,6 +19,7 @@ def get_scatter(**kwargs):
         marker={"size": 10, "line": {"width": 0.5, "color": "white"}},
     )
 
+
 def get_bar(**kwargs):
     return go.Bar(
         **kwargs,
@@ -30,7 +31,7 @@ def get_bar(**kwargs):
 SCORE_METHODS_UI = {
     analysis.PAPA: get_scatter,
     analysis.PRIMA: get_scatter,
-    analysis.FOLD_INDEX: get_bar
+    analysis.FOLD_INDEX: get_bar,
 }
 
 
@@ -40,6 +41,8 @@ def render(app: Dash) -> html.Div:
         Input(ids.SEQUENCE_DROPDOWN, "value"),
     )
     def update_scatter_plot(value) -> dcc.Graph:
+        if not value:
+            raise dash.exceptions.PreventUpdate()
         df = analysis.get_df(value)
         ranges = analysis.get_ranges(df)
         plots = []
@@ -49,7 +52,7 @@ def render(app: Dash) -> html.Div:
                 y=df[k],
                 text=df[analysis.AMINO_ACID],
                 name=k,
-                yaxis=f"y{i}"
+                yaxis=f"y{i}",
             )
             plots.append(plot)
         fig = {
