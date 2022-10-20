@@ -1,4 +1,0 @@
-db:
-  driver: psql
-  user: psql
-  pass: SecretssterceS
