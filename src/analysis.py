@@ -121,14 +121,12 @@ def get_fold_index_scores(sequence: str) -> list:
     """
     charges = calculate_window_scores(sequence, CHARGE)
     hydrophobicities = calculate_window_scores(sequence, HYDROPHOBICITY)
-    fold_index_list = [
+    fold_index_scores = [
         2.785 * hydrophobicities[i] - abs(charges[i]) - 1.151
         for i in range(len(sequence))
     ]
-    fold_index_list = calculate_super_window_scores(sequence, fold_index_list)
-    min_fold_index_score = min(fold_index_list)
-    min_fold_index_position = fold_index_list.index(min_fold_index_score)
-    return (min_fold_index_score, min_fold_index_position, fold_index_list)
+    fold_index_scores = calculate_super_window_scores(sequence, fold_index_scores)
+    return fold_index_scores
 
 
 def get_papa_scores(sequence: str, ignore_fold_index: bool = True) -> list:
@@ -141,22 +139,15 @@ def get_papa_scores(sequence: str, ignore_fold_index: bool = True) -> list:
     Returns:
         List of PAPA scores for all windows in the given sequence.
     """
-    fold_index_scores = get_fold_index_scores(sequence)[2]
     papa_scores = calculate_window_scores(sequence, PROPENSITY, True)
     if ignore_fold_index:
-        papa_score_list = calculate_super_window_scores(sequence, papa_scores)
+        papa_scores = calculate_super_window_scores(sequence, papa_scores)
     else:
-        papa_score_list = calculate_super_window_scores(
+        fold_index_scores = get_fold_index_scores(sequence)
+        papa_scores = calculate_super_window_scores(
             sequence, papa_scores, fold_index_scores=fold_index_scores
         )
-    max_papa_score = max(papa_score_list)
-    max_papa_position = papa_score_list.index(max_papa_score)
-    # the case when no window had a negative foldIndex
-    if max_papa_score is None:
-        max_papa_score = -1.0
-        max_papa_position = -1
-
-    return (max_papa_score, max_papa_position, papa_score_list)
+    return papa_scores
 
 
 def get_prima_scores(sequence: str) -> list:
@@ -167,19 +158,8 @@ def get_prima_scores(sequence: str) -> list:
     Returns: list of PRIMA scores for all windows in the given sequence.
     """
     maintenance_scores = calculate_window_scores(sequence, MAINTENANCE)
-    prima_score_list = [maintenance_scores[i] for i in range(len(sequence))]
-    max_prima_score = max(prima_score_list)
-    max_prima_position = prima_score_list.index(max_prima_score)
-    # ? the case when no window had a negative foldIndex
-    # TODO: Confirm if this is necessary with Maclea
-    if max_prima_score is None:
-        max_prima_score = -1.0
-        max_prima_position = -1
-    return (
-        max_prima_score,
-        max_prima_position,
-        calculate_super_window_scores(sequence, prima_score_list),
-    )
+    prima_scores = [maintenance_scores[i] for i in range(len(sequence))]
+    return calculate_super_window_scores(sequence, prima_scores)
 
 
 SCORE_METHODS = {
@@ -193,12 +173,12 @@ def analyze_sequence(sequence: str) -> pd.DataFrame:
     """
     Create dataframe with prionic activity scores to inform plots
     """
-    elements = {k: v(sequence) for k, v in SCORE_METHODS.items()}
-    _, _, papa_scores = elements[PAPA]
-    _, _, fold_index_scores = elements[FOLD_INDEX]
-    _, _, prima_scores = elements[PRIMA]
+    scores = {k: v(sequence) for k, v in SCORE_METHODS.items()}
+    papa_scores = scores[PAPA]
+    prima_scores = scores[PRIMA]
+    fold_index_scores = scores[FOLD_INDEX]
 
-    score_array = np.empty(((len(sequence) - WINDOW_SIZE), 4))
+    score_array = np.empty((len(papa_scores), 4))
     for idx, papa_score in enumerate(papa_scores):
         score_array[idx, :] = [
             idx + 1,
@@ -208,7 +188,7 @@ def analyze_sequence(sequence: str) -> pd.DataFrame:
         ]
     score_df = pd.DataFrame(
         data=score_array,
-        columns=[SEQUENCE_POSITION, *elements.keys()],
+        columns=[SEQUENCE_POSITION, *scores.keys()],
     )
     return score_df
 
