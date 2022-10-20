@@ -5,9 +5,12 @@ from dash import Dash
 from dash.dependencies import Input, Output
 import plotly.graph_objs as go
 
-import src.analysis as analysis
-from src.sample_data import SAMPLES
-from . import ids
+import primcop.analysis as analysis
+from primcop.components.sequence_dropdown import SEQUENCE_DROPDOWN
+
+
+SCATTER_PLOT = "scatter-plot"
+TABLE = "table"
 
 
 def get_scatter(**kwargs):
@@ -37,8 +40,8 @@ SCORE_METHODS_UI = {
 
 def render(app: Dash) -> html.Div:
     @app.callback(
-        Output(ids.SCATTER_PLOT, "children"),
-        Input(ids.SEQUENCE_DROPDOWN, "value"),
+        Output(SCATTER_PLOT, "children"),
+        Input(SEQUENCE_DROPDOWN, "value"),
     )
     def update_scatter_plot(value) -> dcc.Graph:
         if not value:
@@ -91,4 +94,4 @@ def render(app: Dash) -> html.Div:
         }
         return dcc.Graph(figure=fig)
 
-    return html.Div(id=ids.SCATTER_PLOT)
+    return html.Div(id=SCATTER_PLOT)

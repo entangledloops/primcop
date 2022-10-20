@@ -5,13 +5,15 @@ from dash import Dash
 from dash.dependencies import Input, Output
 import pandas as pd
 
-import src.analysis as analysis
-from src.sample_data import SAMPLES
-from . import ids
+import primcop.analysis as analysis
+from primcop.components.sequence_dropdown import SEQUENCE_DROPDOWN
+
+
+TABLE = "table"
 
 
 def render(app: Dash) -> html.Div:
-    @app.callback(Output(ids.TABLE, "children"), Input(ids.SEQUENCE_DROPDOWN, "value"))
+    @app.callback(Output(TABLE, "children"), Input(SEQUENCE_DROPDOWN, "value"))
     def update_table(value, max_rows=10) -> html.Table:
         if not value:
             raise dash.exceptions.PreventUpdate()
@@ -31,4 +33,4 @@ def render(app: Dash) -> html.Div:
             ]
         )
 
-    return html.Div(id=ids.TABLE)
+    return html.Div(id=TABLE)

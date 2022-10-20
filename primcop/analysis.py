@@ -3,14 +3,14 @@ import collections
 import numpy as np
 import pandas as pd
 
-from src.characteristics import (
+from primcop.characteristics import (
     AMINO_ACIDS,
     PROPENSITY,
     HYDROPHOBICITY,
     CHARGE,
     MAINTENANCE,
 )
-from src.sample_data import SAMPLE_LABELS, SAMPLE_SEQUENCES
+from primcop.sample_data import SAMPLE_LABELS, SAMPLE_SEQUENCES
 
 
 # Constants
@@ -42,16 +42,16 @@ def get_window_bounds(sequence: str, position: int) -> tuple:
 
 def calculate_window_scores(
     sequence: str,
-    aa_dict: dict,
+    aa_scores: dict,
     ignore_consecutive_prolines: bool = False,
 ) -> float:
     """
     Applies a sliding window over sequence, computing the average score of the window
-    as per the score mapping in ``aa_dict``. Returns a list of scores for all windows.
+    as per the score mapping in ``aa_scores``. Returns a list of scores for all windows.
 
     Args:
         sequence: An amino acid sequence
-        aa_dict: The dictionary containing the appropriate log-odds value for the
+        aa_scores: The dictionary containing the appropriate log-odds value for the
             algorithm being performed on sequence.
         ignore_consecutive_prolines: If consecutive residues in a sequence are
             proline (P), do not apply algorithm.
@@ -74,7 +74,7 @@ def calculate_window_scores(
                 and recent_acids.count("P") > 1
             ):
                 continue
-            score += aa_dict[acid]
+            score += aa_scores[acid]
         scores.append(score / (end - start))
     return scores
 
