@@ -46,8 +46,9 @@ def calculate_window_scores(
     ignore_consecutive_prolines: bool = False,
 ) -> float:
     """
-    Applies a sliding window over sequence, computing the average score of the window
-    as per the score mapping in ``aa_scores``. Returns a list of scores for all windows.
+    Applies a sliding window over ``sequence``, computing the average score of the
+    window as per the score mapping in ``aa_scores``. Returns a list of scores for
+    all windows.
 
     Args:
         sequence: An amino acid sequence
