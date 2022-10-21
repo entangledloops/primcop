@@ -1,6 +1,6 @@
 from dash import Dash
 
-from src.components.layout import create_layout
+from primcop.components.layout import create_layout
 
 
 def main() -> None:

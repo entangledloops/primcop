@@ -1,13 +1,16 @@
-from dash import Dash
+import dash
 import dash_core_components as dcc
 import dash_html_components as html
+from dash import Dash
 from dash.dependencies import Input, Output
 import plotly.graph_objs as go
 
-import src.analysis as analysis
-from src.sample_data import SAMPLES
+import primcop.analysis as analysis
+from primcop.components.sequence_dropdown import SEQUENCE_DROPDOWN
 
-from . import ids
+
+SCATTER_PLOT = "scatter-plot"
+TABLE = "table"
 
 
 def get_scatter(**kwargs):
@@ -18,6 +21,7 @@ def get_scatter(**kwargs):
         opacity=0.7,
         marker={"size": 10, "line": {"width": 0.5, "color": "white"}},
     )
+
 
 def get_bar(**kwargs):
     return go.Bar(
@@ -30,16 +34,18 @@ def get_bar(**kwargs):
 SCORE_METHODS_UI = {
     analysis.PAPA: get_scatter,
     analysis.PRIMA: get_scatter,
-    analysis.FOLD_INDEX: get_bar
+    analysis.FOLD_INDEX: get_bar,
 }
 
 
 def render(app: Dash) -> html.Div:
     @app.callback(
-        Output(ids.SCATTER_PLOT, "children"),
-        Input(ids.SEQUENCE_DROPDOWN, "value"),
+        Output(SCATTER_PLOT, "children"),
+        Input(SEQUENCE_DROPDOWN, "value"),
     )
     def update_scatter_plot(value) -> dcc.Graph:
+        if not value:
+            raise dash.exceptions.PreventUpdate()
         df = analysis.get_df(value)
         ranges = analysis.get_ranges(df)
         plots = []
@@ -49,7 +55,7 @@ def render(app: Dash) -> html.Div:
                 y=df[k],
                 text=df[analysis.AMINO_ACID],
                 name=k,
-                yaxis=f"y{i}"
+                yaxis=f"y{i}",
             )
             plots.append(plot)
         fig = {
@@ -88,4 +94,4 @@ def render(app: Dash) -> html.Div:
         }
         return dcc.Graph(figure=fig)
 
-    return html.Div(id=ids.SCATTER_PLOT)
+    return html.Div(id=SCATTER_PLOT)

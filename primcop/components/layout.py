@@ -1,7 +1,7 @@
 from dash import Dash
 import dash_html_components as html
 
-from . import scatter_plot, sequence_dropdown, table
+from primcop.components import scatter_plot, sequence_dropdown, table
 
 
 def create_layout(app: Dash) -> html.Div:
