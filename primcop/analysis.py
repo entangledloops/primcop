@@ -100,6 +100,10 @@ def calculate_super_window_scores(
         else:
             score = 0.0
             weights = 0.0
+            # we weight the edges of the sequence more heavily than the center
+            # by using the original window bounds as the denominator rather than
+            # the window size, i.e. ~WINDOW_SIZE/2 near the edges and divide by
+            # WINDOW_SIZE everywhere else
             for j in range(i, i + WINDOW_SIZE):
                 start, end = get_window_bounds(sequence, j)
                 score += (end - start) * window_scores[j]
@@ -173,18 +177,14 @@ def analyze_sequence(sequence: str) -> pd.DataFrame:
     Create dataframe with prionic activity scores to inform plots
     """
     scores = {k: v(sequence) for k, v in SCORE_METHODS.items()}
-    papa_scores = scores[PAPA]
-    prima_scores = scores[PRIMA]
-    fold_index_scores = scores[FOLD_INDEX]
-
-    score_array = np.empty((len(papa_scores), 4))
-    for idx, papa_score in enumerate(papa_scores):
+    num_scores = len(sequence) - WINDOW_SIZE
+    score_array = np.empty((num_scores, 1 + len(scores)))
+    for idx, *score in zip(range(num_scores), *list(scores.values())):
         score_array[idx, :] = [
             idx + 1,
-            papa_score,
-            prima_scores[idx],
-            fold_index_scores[idx],
+            *score
         ]
+
     score_df = pd.DataFrame(
         data=score_array,
         columns=[SEQUENCE_POSITION, *scores.keys()],

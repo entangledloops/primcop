@@ -10,7 +10,6 @@ from primcop.components.sequence_dropdown import SEQUENCE_DROPDOWN
 
 
 SCATTER_PLOT = "scatter-plot"
-TABLE = "table"
 
 
 def get_scatter(**kwargs):
@@ -30,13 +29,48 @@ def get_bar(**kwargs):
         marker_color="red",
     )
 
-
 SCORE_METHODS_UI = {
     analysis.PAPA: get_scatter,
     analysis.PRIMA: get_scatter,
     analysis.FOLD_INDEX: get_bar,
 }
 
+def get_papa_axis(ranges):
+    return dict(
+        title=analysis.PAPA,
+        range=ranges,
+        titlefont=dict(color="#1f77b4"),
+        tickfont=dict(color="#1f77b4"),
+    )
+
+def get_prima_axis(ranges):
+    return dict(
+        title=analysis.PRIMA,
+        range=ranges,
+        titlefont=dict(color="#ff7f0e"),
+        tickfont=dict(color="#ff7f0e"),
+        anchor="free",
+        overlaying="y",
+        side="left",
+        position=0.20,
+    )
+
+def get_fold_index(ranges):
+    return dict(
+        title=analysis.FOLD_INDEX,
+        range=ranges,
+        titlefont=dict(color="#FF0000"),
+        tickfont=dict(color="#FF0000"),
+        anchor="x",
+        overlaying="y",
+        side="right",
+    )
+
+SCORE_METHODS_YAXIS = {
+    analysis.PAPA: get_papa_axis,
+    analysis.PRIMA: get_prima_axis,
+    analysis.FOLD_INDEX: get_fold_index,
+}
 
 def render(app: Dash) -> html.Div:
     @app.callback(
@@ -58,36 +92,17 @@ def render(app: Dash) -> html.Div:
                 yaxis=f"y{i}",
             )
             plots.append(plot)
+        method_names = [name for name in df if name in SCORE_METHODS_YAXIS]
+        yaxes = {
+            f"yaxis{i+1}": SCORE_METHODS_YAXIS[name](ranges[name])
+            for i, name in enumerate(method_names)
+        }
         fig = {
             "data": plots,
             "layout": go.Layout(
                 title="Measures of Potential Prion Activity",
                 xaxis={"title": "Amino Acid Position in Sequence"},
-                yaxis=dict(
-                    title=analysis.PAPA,
-                    range=ranges[analysis.PAPA],
-                    titlefont=dict(color="#1f77b4"),
-                    tickfont=dict(color="#1f77b4"),
-                ),
-                yaxis2=dict(
-                    title=analysis.PRIMA,
-                    range=ranges[analysis.PRIMA],
-                    titlefont=dict(color="#ff7f0e"),
-                    tickfont=dict(color="#ff7f0e"),
-                    anchor="free",
-                    overlaying="y",
-                    side="left",
-                    position=0.20,
-                ),
-                yaxis3=dict(
-                    title=analysis.FOLD_INDEX,
-                    range=ranges[analysis.FOLD_INDEX],
-                    titlefont=dict(color="#FF0000"),
-                    tickfont=dict(color="#FF0000"),
-                    anchor="x",
-                    overlaying="y",
-                    side="right",
-                ),
+                **yaxes,
                 legend={"x": -0.15, "y": 1},
                 hovermode="closest",
             ),
